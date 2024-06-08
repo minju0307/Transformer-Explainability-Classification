@@ -39,24 +39,24 @@ class Generator:
         one_hot = torch.from_numpy(one_hot).requires_grad_(True)
         one_hot = torch.sum(one_hot.cuda() * output)
 
-        self.model.zero_grad()
-        one_hot.backward(retain_graph=True)
+        self.model.zero_grad() ## 모델의 그래디언트를 초기화 
+        one_hot.backward(retain_graph=True) ## output에서 최종 정답값 하나에 해당하는 one_hot에 대하여 backward를 통해 gradient 계산
 
-        self.model.relprop(torch.tensor(one_hot_vector).to(input_ids.device), **kwargs)
+        self.model.relprop(torch.tensor(one_hot_vector).to(input_ids.device), **kwargs) ## relprop의 첫번째 cam (class activation map) 으로 정답값만 1이 있는 one-hot vector가 주어짐
 
         cams = []
         blocks = self.model.bert.encoder.layer
         for blk in blocks:
-            grad = blk.attention.self.get_attn_gradients()
-            cam = blk.attention.self.get_attn_cam()
-            cam = cam[0].reshape(-1, cam.shape[-1], cam.shape[-1])
-            grad = grad[0].reshape(-1, grad.shape[-1], grad.shape[-1])
-            cam = grad * cam
-            cam = cam.clamp(min=0).mean(dim=0)
-            cams.append(cam.unsqueeze(0))
-        rollout = compute_rollout_attention(cams, start_layer=start_layer)
-        rollout[:, 0, 0] = rollout[:, 0].min()
-        return rollout[:, 0]
+            grad = blk.attention.self.get_attn_gradients() ## BERT.py의 bert self attention에서 가져올 수 있음 torch.Size([1, 12, 103, 103])
+            cam = blk.attention.self.get_attn_cam() ## BERT.py의 bert self attention에서 가져올 수 있음 torch.Size([1, 12, 103, 103])
+            cam = cam[0].reshape(-1, cam.shape[-1], cam.shape[-1]) ## torch.Size([12, 103, 103])
+            grad = grad[0].reshape(-1, grad.shape[-1], grad.shape[-1]) ## torch.Size([12, 103, 103])
+            cam = grad * cam ## torch.Size([12, 103, 103])
+            cam = cam.clamp(min=0).mean(dim=0) ## 최솟값을 0으로 설정, 긍정적인 영향만 고려하고자함. mean(dim=0) 각 레이어별 특성값을 평균내서 토큰별로 영향력을 계산할 수 있게 함 torch.Size([103, 103])
+            cams.append(cam.unsqueeze(0)) ## Unsqueeze하면 1,103,103으로 늘려서 저장할 수 있음 
+        rollout = compute_rollout_attention(cams, start_layer=start_layer) ## 롤아웃은 모델 내 각 레이어의 어텐션 메트릭스를 종합하여 전체 입력 시퀀스에 대한 최종적인 어텐션 패턴 계산 torch.Size([1, 103, 103])
+        rollout[:, 0, 0] = rollout[:, 0].min() ## 모든 행의 첫번째 열의 가장 작은 값 (rollout[:, 0].min())을 텐서의 첫번째 요소에 할당 -> cls 토큰이 서로에 대한 dependency가 높지 않도록 
+        return rollout[:, 0] ## 첫 번째 요소만 가져온다 -> Cls 클래스를 결정짓는 데에 얼만큼의 어텐션을 가지고 있는지를 가져온다. 
 
 
     def generate_LRP_last_layer(self, input_ids, attention_mask,
