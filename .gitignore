@@ -1,0 +1,14 @@
+*.pyc
+all_good_vis/
+__pycache__
+*.tar
+.idea
+run/
+baselines/ViT/experiments/
+baselines/ViT/visualizations/
+bert_models/
+data/movies/
+myenv/
+klue-bert-epoch-32/
+.ipynb_checkpoints/
+
