@@ -83,15 +83,15 @@ class BertForSequenceClassification(BertPreTrainedModel):
     def relprop(self, cam=None, **kwargs):
         cam = self.classifier.relprop(cam, **kwargs)
         print("***")
-        print(cam)
+        print(cam.shape)
         print()
         cam = self.dropout.relprop(cam, **kwargs)
         print("***")
-        print(cam)
+        print(cam.shape)
         print()
         cam = self.bert.relprop(cam, **kwargs)
         print("***")
-        print(cam)
+        print(cam.shape)
         print()
         # print("conservation: ", cam.sum())
         return cam
