@@ -27,11 +27,11 @@ class Generator:
 
     def generate_LRP(self, input_ids, attention_mask,
                      index=None, start_layer=11):
-        output = self.model(input_ids=input_ids, attention_mask=attention_mask)[0]
+        output = self.model(input_ids=input_ids, attention_mask=attention_mask)[0] ## 5개의 클래스에 대해서 확률값 logit을 반환
         kwargs = {"alpha": 1}
 
         if index == None:
-            index = np.argmax(output.cpu().data.numpy(), axis=-1)
+            index = np.argmax(output.cpu().data.numpy(), axis=-1) ## 정답값의 index (예 : array([2]))
 
         one_hot = np.zeros((1, output.size()[-1]), dtype=np.float32)
         one_hot[0, index] = 1
